@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net10.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <Platforms>AnyCPU</Platforms>
+        <NoWarn>$(NoWarn);1591</NoWarn>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <Description>Builds a set of living components from the Quark demo website</Description>
+        <Version Condition="'$(BUILD_VERSION)' == ''">4.0.0</Version>
+        <Version Condition="'$(BUILD_VERSION)' != ''">$(BUILD_VERSION)</Version>
+        <AssemblyName>Soenneker.Quark.Runners.Crawler</AssemblyName>
+        <Copyright>Copyright © 2026 Jake Soenneker</Copyright>
+        <Authors>Jake Soenneker</Authors>
+        <Company>https://soenneker.com</Company>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <IsPackable>false</IsPackable>
+        <LangVersion>latest</LangVersion>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="AngleSharp" Version="1.4.0" />
+        <PackageReference Include="Soenneker.Extensions.LoggerConfiguration" Version="4.0.1248" />
+        <PackageReference Include="Soenneker.Git.Util" Version="4.0.3507" />
+        <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.7" />
+        <PackageReference Include="Soenneker.Managers.Runners" Version="4.0.2085" />
+        <PackageReference Include="Soenneker.Node.Util" Version="4.0.130" />
+        <PackageReference Include="Soenneker.Playwrights.Crawler" Version="4.0.36" />
+        <PackageReference Include="Soenneker.Utils.Delay" Version="4.0.66" />
+        <PackageReference Include="Soenneker.Utils.File.Download" Version="4.0.1586" />
+    </ItemGroup>
+</Project>
