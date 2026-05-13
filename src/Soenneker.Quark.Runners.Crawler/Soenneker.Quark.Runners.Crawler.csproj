@@ -24,7 +24,7 @@
     <ItemGroup>
         <PackageReference Include="AngleSharp" Version="1.4.0" />
         <PackageReference Include="Soenneker.Extensions.LoggerConfiguration" Version="4.0.1254" />
-        <PackageReference Include="Soenneker.Git.Util" Version="4.0.3520" />
+        <PackageReference Include="Soenneker.Git.Util" Version="4.0.3521" />
         <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.8" />
         <PackageReference Include="Soenneker.Managers.Runners" Version="4.0.2107" />
         <PackageReference Include="Soenneker.Node.Util" Version="4.0.151" />
