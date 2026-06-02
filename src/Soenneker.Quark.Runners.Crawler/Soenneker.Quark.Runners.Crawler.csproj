@@ -27,7 +27,7 @@
         <PackageReference Include="Soenneker.Git.Util" Version="4.0.3522" />
         <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.8" />
         <PackageReference Include="Soenneker.Managers.Runners" Version="4.0.2121" />
-        <PackageReference Include="Soenneker.Node.Util" Version="4.0.154" />
+        <PackageReference Include="Soenneker.Node.Util" Version="4.0.155" />
         <PackageReference Include="Soenneker.Playwrights.Crawler" Version="4.0.59" />
         <PackageReference Include="Soenneker.Utils.Delay" Version="4.0.67" />
         <PackageReference Include="Soenneker.Utils.File.Download" Version="4.0.1598" />
