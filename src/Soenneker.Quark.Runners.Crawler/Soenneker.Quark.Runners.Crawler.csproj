@@ -24,7 +24,7 @@
     <ItemGroup>
 <PackageReference Include="Soenneker.Extensions.LoggerConfiguration" Version="4.0.1288" />
 <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.10" />
-        <PackageReference Include="Soenneker.Managers.Runners" Version="4.0.2236" />
+        <PackageReference Include="Soenneker.Managers.Runners" Version="4.0.2237" />
         <PackageReference Include="Soenneker.Node.Util" Version="4.0.198" />
         <PackageReference Include="Soenneker.Playwrights.Crawler" Version="4.0.121" />
         <PackageReference Include="Soenneker.Utils.Delay" Version="4.0.72" />
