@@ -4,12 +4,12 @@ using System.Threading.Tasks;
 namespace Soenneker.Quark.Runners.Crawler.Utils.Abstract;
 
 /// <summary>
-/// Defines the file operations util contract.
+/// Coordinates the Quark component-preview refresh.
 /// </summary>
 public interface IFileOperationsUtil
 {
     /// <summary>
-    /// Processes the pending work managed by the File Operations.
+    /// Refreshes and publishes the generated component-preview repositories.
     /// </summary>
     /// <param name="cancellationToken">Token used to cancel the operation.</param>
     /// <returns>A task that completes when the full processing workflow has finished.</returns>

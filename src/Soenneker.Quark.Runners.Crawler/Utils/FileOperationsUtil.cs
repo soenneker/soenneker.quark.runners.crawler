@@ -23,7 +23,6 @@ using Soenneker.Utils.Process.Abstract;
 
 namespace Soenneker.Quark.Runners.Crawler.Utils;
 
-/// <inheritdoc cref="IFileOperationsUtil"/>
 public sealed class FileOperationsUtil : IFileOperationsUtil
 {
     private readonly ILogger<FileOperationsUtil> _logger;
@@ -51,23 +50,38 @@ public sealed class FileOperationsUtil : IFileOperationsUtil
     public async ValueTask Process(CancellationToken cancellationToken)
     {
         string tempRoot = await _pathUtil.GetUniqueTempDirectory("soenneker-quark-runners-crawler", true, cancellationToken);
-        string crawledRepositoryDirectory = Path.Combine(tempRoot, "soenneker-quark-crawled");
-        string componentsRepositoryDirectory = Path.Combine(tempRoot, "soenneker-quark-crawled-components");
-        string crawlDirectory = Path.Combine(tempRoot, "crawl");
-        string extractedDirectory = Path.Combine(tempRoot, "extracted");
 
-        await CloneRepository(Constants.CrawledRepository, crawledRepositoryDirectory, cancellationToken);
-        await CloneRepository(Constants.ComponentsRepository, componentsRepositoryDirectory, cancellationToken);
+        try
+        {
+            string crawledRepositoryDirectory = Path.Combine(tempRoot, "soenneker-quark-crawled");
+            string componentsRepositoryDirectory = Path.Combine(tempRoot, "soenneker-quark-crawled-components");
+            string crawlDirectory = Path.Combine(tempRoot, "crawl");
+            string extractedDirectory = Path.Combine(tempRoot, "extracted");
 
-        await Crawl(crawlDirectory, cancellationToken);
-        string crawlContentDirectory = await GetCrawlContentDirectory(crawlDirectory, cancellationToken);
+            await CloneRepository(Constants.CrawledRepository, crawledRepositoryDirectory, cancellationToken);
+            await CloneRepository(Constants.ComponentsRepository, componentsRepositoryDirectory, cancellationToken);
 
-        await ReplaceRepositoryContents(crawledRepositoryDirectory, crawlContentDirectory, cancellationToken);
-        await CommitAndPush(crawledRepositoryDirectory, cancellationToken);
+            await Crawl(crawlDirectory, cancellationToken);
+            string crawlContentDirectory = await GetCrawlContentDirectory(crawlDirectory, cancellationToken);
 
-        await ExtractPreviewFamilies(crawlContentDirectory, extractedDirectory, cancellationToken);
-        await ReplaceRepositoryContents(componentsRepositoryDirectory, extractedDirectory, cancellationToken);
-        await CommitAndPush(componentsRepositoryDirectory, cancellationToken);
+            await ReplaceRepositoryContents(crawledRepositoryDirectory, crawlContentDirectory, cancellationToken);
+            await CommitAndPush(crawledRepositoryDirectory, cancellationToken);
+
+            await ExtractPreviewFamilies(crawlContentDirectory, extractedDirectory, cancellationToken);
+            await ReplaceRepositoryContents(componentsRepositoryDirectory, extractedDirectory, cancellationToken);
+            await CommitAndPush(componentsRepositoryDirectory, cancellationToken);
+        }
+        finally
+        {
+            try
+            {
+                await _directoryUtil.DeleteIfExists(tempRoot, CancellationToken.None);
+            }
+            catch (Exception exception)
+            {
+                _logger.LogWarning(exception, "Could not remove temporary crawler directory {TempRoot}", tempRoot);
+            }
+        }
     }
 
     private async ValueTask CloneRepository(string repositoryUrl, string targetDirectory, CancellationToken cancellationToken)
@@ -97,6 +111,9 @@ public sealed class FileOperationsUtil : IFileOperationsUtil
         }, cancellationToken);
 
         _logger.LogInformation("Crawl complete. PagesVisited: {PagesVisited}, HtmlFilesSaved: {HtmlFilesSaved}", result.PagesVisited, result.HtmlFilesSaved);
+
+        if (result.PagesVisited == 0 || result.HtmlFilesSaved == 0)
+            throw new InvalidOperationException("The crawl produced no HTML output; existing generated repositories will not be replaced.");
     }
 
     private async ValueTask<string> GetCrawlContentDirectory(string crawlDirectory, CancellationToken cancellationToken)
@@ -156,14 +173,32 @@ public sealed class FileOperationsUtil : IFileOperationsUtil
 
     private async ValueTask ReplaceRepositoryContents(string repositoryDirectory, string sourceDirectory, CancellationToken cancellationToken)
     {
+        string repositoryRoot = Path.GetFullPath(repositoryDirectory);
+        string sourceRoot = Path.GetFullPath(sourceDirectory);
+        string gitDirectory = Path.Combine(repositoryRoot, ".git");
+
+        if (!await _directoryUtil.Exists(gitDirectory, cancellationToken))
+            throw new InvalidOperationException($"Refusing to replace a directory that is not a Git checkout: {repositoryRoot}");
+
+        if (!await _directoryUtil.Exists(sourceRoot, cancellationToken))
+            throw new InvalidOperationException($"Generated source directory does not exist: {sourceRoot}");
+
+        List<string> sourcePaths = await _directoryUtil.GetFilesByExtension(sourceRoot, "", true, cancellationToken);
+
+        if (sourcePaths.Count == 0)
+            throw new InvalidOperationException($"Generated source directory is empty; existing repository content will not be deleted: {sourceRoot}");
+
         List<string> directories = await _directoryUtil.GetAllDirectories(repositoryDirectory, cancellationToken);
 
         foreach (string directory in directories)
         {
-            if (Path.GetFileName(directory).Equals(".git", StringComparison.OrdinalIgnoreCase))
+            string fullDirectory = Path.GetFullPath(directory);
+
+            if (!string.Equals(Path.GetDirectoryName(fullDirectory), repositoryRoot, StringComparison.OrdinalIgnoreCase) ||
+                Path.GetFileName(fullDirectory).Equals(".git", StringComparison.OrdinalIgnoreCase))
                 continue;
 
-            await _directoryUtil.Delete(directory, cancellationToken);
+            await _directoryUtil.Delete(fullDirectory, cancellationToken);
         }
 
         List<string> files = await _directoryUtil.GetFilesByExtension(repositoryDirectory, "", false, cancellationToken);
@@ -173,12 +208,15 @@ public sealed class FileOperationsUtil : IFileOperationsUtil
             await _fileUtil.Delete(file, cancellationToken: cancellationToken);
         }
 
-        List<string> sourcePaths = await _directoryUtil.GetFilesByExtension(sourceDirectory, "", true, cancellationToken);
-
         foreach (string sourcePath in sourcePaths)
         {
-            string relativePath = Path.GetRelativePath(sourceDirectory, sourcePath);
-            string destination = Path.Combine(repositoryDirectory, relativePath);
+            string relativePath = Path.GetRelativePath(sourceRoot, sourcePath);
+            string destination = Path.GetFullPath(Path.Combine(repositoryRoot, relativePath));
+            string repositoryPrefix = repositoryRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+
+            if (!destination.StartsWith(repositoryPrefix, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException($"Generated path resolves outside the repository checkout: {relativePath}");
+
             string? destinationDirectory = Path.GetDirectoryName(destination);
 
             if (!string.IsNullOrWhiteSpace(destinationDirectory))
