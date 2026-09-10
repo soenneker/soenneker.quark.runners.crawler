@@ -20,11 +20,11 @@ public static class Constants
     /// <summary>
     /// The components url.
     /// </summary>
-    public const string ComponentsUrl = "https://soenneker.github.io/soenneker.quark.suite/";
+    public const string ComponentsUrl = "https://quark.soenneker.com/";
     /// <summary>
-    /// The crawl base path.
+    /// The crawl base path. The custom domain serves the suite from its root.
     /// </summary>
-    public const string CrawlBasePath = "soenneker.quark.suite";
+    public const string CrawlBasePath = "";
     /// <summary>
     /// The commit message.
     /// </summary>

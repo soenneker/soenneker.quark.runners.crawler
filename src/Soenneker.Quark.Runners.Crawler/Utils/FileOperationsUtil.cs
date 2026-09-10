@@ -23,7 +23,6 @@ using Soenneker.Utils.Process.Abstract;
 
 namespace Soenneker.Quark.Runners.Crawler.Utils;
 
-/// <inheritdoc cref="IFileOperationsUtil" />
 public sealed class FileOperationsUtil : IFileOperationsUtil
 {
     private readonly ILogger<FileOperationsUtil> _logger;
@@ -65,11 +64,13 @@ public sealed class FileOperationsUtil : IFileOperationsUtil
             await Crawl(crawlDirectory, cancellationToken);
             string crawlContentDirectory = await GetCrawlContentDirectory(crawlDirectory, cancellationToken);
 
-            await ReplaceRepositoryContents(crawledRepositoryDirectory, crawlContentDirectory, cancellationToken);
-            await CommitAndPush(crawledRepositoryDirectory, cancellationToken);
-
+            // Validate extraction before replacing or publishing either generated repository.
             await ExtractPreviewFamilies(crawlContentDirectory, extractedDirectory, cancellationToken);
+
+            await ReplaceRepositoryContents(crawledRepositoryDirectory, crawlContentDirectory, cancellationToken);
             await ReplaceRepositoryContents(componentsRepositoryDirectory, extractedDirectory, cancellationToken);
+
+            await CommitAndPush(crawledRepositoryDirectory, cancellationToken);
             await CommitAndPush(componentsRepositoryDirectory, cancellationToken);
         }
         finally
@@ -104,10 +105,12 @@ public sealed class FileOperationsUtil : IFileOperationsUtil
             PrettyPrintHtml = true,
             ClearSaveDirectory = true,
             OverwriteExistingFiles = true,
-            ContinueOnPageError = true,
+            ContinueOnPageError = false,
             Headless = true,
             UseStealth = true,
             NavigationTimeoutMs = 60_000,
+            ReadinessExpression = "() => document.querySelector('#app a[href]') !== null",
+            ReadinessTimeoutMs = 60_000,
             PostNavigationDelayMs = 2_000
         }, cancellationToken);
 
@@ -134,6 +137,7 @@ public sealed class FileOperationsUtil : IFileOperationsUtil
 
         var parser = new HtmlParser();
         var formatter = new PrettyMarkupFormatter();
+        int familiesSaved = 0;
 
         List<string> htmlFiles = await _directoryUtil.GetFilesByExtension(crawlDirectory, ".html", true, cancellationToken);
 
@@ -168,8 +172,14 @@ public sealed class FileOperationsUtil : IFileOperationsUtil
             builder.AppendLine("</html>");
 
             await _fileUtil.Write(outputPath, builder.ToString().TrimEnd() + Environment.NewLine, cancellationToken: cancellationToken);
+            familiesSaved++;
             _logger.LogInformation("Saved {Count} previews to {Path}", previews.Length, outputPath);
         }
+
+        if (familiesSaved == 0)
+            throw new InvalidOperationException(
+                $"The crawl of {Constants.ComponentsUrl} produced no component previews (div[data-slot=\"preview\"]). " +
+                "The site may not have finished rendering or its preview markup may have changed; neither generated repository will be replaced or pushed.");
     }
 
     private async ValueTask ReplaceRepositoryContents(string repositoryDirectory, string sourceDirectory, CancellationToken cancellationToken)
