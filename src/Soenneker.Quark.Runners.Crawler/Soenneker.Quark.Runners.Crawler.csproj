@@ -22,11 +22,11 @@
     </PropertyGroup>
 
     <ItemGroup>
-<PackageReference Include="Soenneker.Extensions.LoggerConfiguration" Version="4.0.1392" />
+<PackageReference Include="Soenneker.Extensions.LoggerConfiguration" Version="4.0.1393" />
 <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.12" />
         <PackageReference Include="Soenneker.Managers.Runners" Version="4.0.2529" />
-        <PackageReference Include="Soenneker.Node.Util" Version="4.0.324" />
-        <PackageReference Include="Soenneker.Playwrights.Crawler" Version="4.0.270" />
+        <PackageReference Include="Soenneker.Node.Util" Version="4.0.325" />
+        <PackageReference Include="Soenneker.Playwrights.Crawler" Version="4.0.271" />
         <PackageReference Include="Soenneker.Utils.Delay" Version="4.0.89" />
         <PackageReference Include="Soenneker.Utils.File.Download" Version="4.0.1767" />
     </ItemGroup>
