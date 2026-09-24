@@ -22,12 +22,12 @@
     </PropertyGroup>
 
     <ItemGroup>
-<PackageReference Include="Soenneker.Extensions.LoggerConfiguration" Version="4.0.1393" />
+<PackageReference Include="Soenneker.Extensions.LoggerConfiguration" Version="4.0.1394" />
 <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.12" />
-        <PackageReference Include="Soenneker.Managers.Runners" Version="4.0.2544" />
-        <PackageReference Include="Soenneker.Node.Util" Version="4.0.327" />
-        <PackageReference Include="Soenneker.Playwrights.Crawler" Version="4.0.274" />
-        <PackageReference Include="Soenneker.Utils.File.Download" Version="4.0.1770" />
+        <PackageReference Include="Soenneker.Managers.Runners" Version="4.0.2547" />
+        <PackageReference Include="Soenneker.Node.Util" Version="4.0.328" />
+        <PackageReference Include="Soenneker.Playwrights.Crawler" Version="4.0.275" />
+        <PackageReference Include="Soenneker.Utils.File.Download" Version="4.0.1773" />
     </ItemGroup>
     <ItemGroup>
         <PackageReference Include="Soenneker.Enums.DeployEnvironment" Version="4.0.242" />
