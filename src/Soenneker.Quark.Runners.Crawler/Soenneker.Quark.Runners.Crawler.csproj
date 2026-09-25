@@ -27,7 +27,7 @@
         <PackageReference Include="Soenneker.Managers.Runners" Version="4.0.2559" />
         <PackageReference Include="Soenneker.Node.Util" Version="4.0.336" />
         <PackageReference Include="Soenneker.Playwrights.Crawler" Version="4.0.284" />
-        <PackageReference Include="Soenneker.Utils.File.Download" Version="4.0.1782" />
+        <PackageReference Include="Soenneker.Utils.File.Download" Version="4.0.1783" />
     </ItemGroup>
     <ItemGroup>
         <PackageReference Include="Soenneker.Enums.DeployEnvironment" Version="4.0.244" />
