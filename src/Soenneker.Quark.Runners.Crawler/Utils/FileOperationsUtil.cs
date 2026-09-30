@@ -244,7 +244,7 @@ public sealed class FileOperationsUtil : IFileOperationsUtil
         string name = EnvironmentUtil.GetVariableStrict("GIT__NAME");
         string email = EnvironmentUtil.GetVariableStrict("GIT__EMAIL");
 
-        await _gitUtil.CommitAndPush(repositoryDir, $"{Constants.CommitMessage} ({Directory.EnumerateFiles(repositoryDir, "*.html", SearchOption.AllDirectories).Count()} HTML files)\n\nSource: {Constants.ComponentsUrl}", token, name, email, cancellationToken);
+        await _gitUtil.CommitAndPush(repositoryDir, Constants.CommitMessage, token, name, email, cancellationToken);
     }
 
     private static string GetFamilyName(string crawlDirectory, string htmlFile)
