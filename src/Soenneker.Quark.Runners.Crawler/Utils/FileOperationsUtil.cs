@@ -94,7 +94,7 @@ public sealed class FileOperationsUtil : IFileOperationsUtil
 
     private async ValueTask Crawl(string crawlDirectory, CancellationToken cancellationToken)
     {
-        PlaywrightCrawlResult result = await _playwrightCrawler.Crawl(new PlaywrightCrawlOptions
+        var options = new PlaywrightCrawlOptions
         {
             Url = Constants.ComponentsUrl,
             SaveDirectory = crawlDirectory,
@@ -111,8 +111,38 @@ public sealed class FileOperationsUtil : IFileOperationsUtil
             NavigationTimeoutMs = 60_000,
             ReadinessExpression = "() => document.querySelector('#app a[href]') !== null",
             ReadinessTimeoutMs = 60_000,
-            PostNavigationDelayMs = 2_000
-        }, cancellationToken);
+            PostNavigationDelayMs = 2_000,
+            Policy = new PlaywrightCrawlPolicy
+            {
+                GlobalMaxConcurrency = 2,
+                PerDomainMaxConcurrency = 2,
+                PerIpMaxConcurrency = 2,
+                MaxRetries = 3
+            }
+        };
+
+        const int maxAttempts = 3;
+        PlaywrightCrawlResult result;
+
+        for (int attempt = 1; ; attempt++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            try
+            {
+                result = await _playwrightCrawler.Crawl(options, cancellationToken);
+                break;
+            }
+            catch (TimeoutException exception) when (attempt < maxAttempts && !cancellationToken.IsCancellationRequested)
+            {
+                // Navigation retries do not cover application readiness. Restart with a fresh browser and clean output.
+                TimeSpan delay = TimeSpan.FromSeconds(5 * attempt);
+                _logger.LogWarning(exception,
+                    "Crawl timed out on attempt {Attempt} of {MaxAttempts}; restarting in {DelaySeconds} seconds",
+                    attempt, maxAttempts, delay.TotalSeconds);
+                await Task.Delay(delay, cancellationToken);
+            }
+        }
 
         _logger.LogInformation("Crawl complete. PagesVisited: {PagesVisited}, HtmlFilesSaved: {HtmlFilesSaved}", result.PagesVisited, result.HtmlFilesSaved);
 
