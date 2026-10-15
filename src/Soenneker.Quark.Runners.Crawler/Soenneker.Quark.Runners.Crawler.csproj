@@ -27,7 +27,7 @@
 <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.13" />
         <PackageReference Include="Soenneker.Managers.Runners" Version="4.0.2640" />
         <PackageReference Include="Soenneker.Node.Util" Version="4.0.371" />
-        <PackageReference Include="Soenneker.Playwrights.Crawler" Version="4.0.325" />
+        <PackageReference Include="Soenneker.Playwrights.Crawler" Version="4.0.326" />
         <PackageReference Include="Soenneker.Utils.File.Download" Version="4.0.1820" />
     </ItemGroup>
     <ItemGroup>
