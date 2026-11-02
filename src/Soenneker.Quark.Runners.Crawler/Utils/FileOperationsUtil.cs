@@ -9,6 +9,7 @@ using AngleSharp.Dom;
 using AngleSharp.Html;
 using AngleSharp.Html.Parser;
 using Microsoft.Extensions.Logging;
+using Microsoft.Playwright;
 using Soenneker.Git.Util.Abstract;
 using Soenneker.Node.Util.Abstract;
 using Soenneker.Playwrights.Crawler.Abstract;
@@ -25,6 +26,9 @@ namespace Soenneker.Quark.Runners.Crawler.Utils;
 
 public sealed class FileOperationsUtil : IFileOperationsUtil
 {
+    private const int PageReadinessTimeoutMs = 60_000;
+    private const int MaxPageReadinessAttempts = 3;
+
     private readonly ILogger<FileOperationsUtil> _logger;
     private readonly IGitUtil _gitUtil;
     private readonly INodeUtil _nodeUtil;
@@ -109,8 +113,9 @@ public sealed class FileOperationsUtil : IFileOperationsUtil
             Headless = true,
             UseStealth = true,
             NavigationTimeoutMs = 60_000,
-            ReadinessExpression = "() => document.querySelector('#app a[href]') !== null",
-            ReadinessTimeoutMs = 60_000,
+            PageReadinessHandler = WaitForPageReadiness,
+            // Include readiness waits, retry navigations, and backoff in the callback budget.
+            ReadinessTimeoutMs = PageReadinessTimeoutMs * MaxPageReadinessAttempts * 2,
             PostNavigationDelayMs = 2_000,
             Policy = new PlaywrightCrawlPolicy
             {
@@ -121,33 +126,51 @@ public sealed class FileOperationsUtil : IFileOperationsUtil
             }
         };
 
-        const int maxAttempts = 3;
-        PlaywrightCrawlResult result;
-
-        for (int attempt = 1; ; attempt++)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            try
-            {
-                result = await _playwrightCrawler.Crawl(options, cancellationToken);
-                break;
-            }
-            catch (TimeoutException exception) when (attempt < maxAttempts && !cancellationToken.IsCancellationRequested)
-            {
-                // Navigation retries do not cover application readiness. Restart with a fresh browser and clean output.
-                TimeSpan delay = TimeSpan.FromSeconds(5 * attempt);
-                _logger.LogWarning(exception,
-                    "Crawl timed out on attempt {Attempt} of {MaxAttempts}; restarting in {DelaySeconds} seconds",
-                    attempt, maxAttempts, delay.TotalSeconds);
-                await Task.Delay(delay, cancellationToken);
-            }
-        }
+        PlaywrightCrawlResult result = await _playwrightCrawler.Crawl(options, cancellationToken);
 
         _logger.LogInformation("Crawl complete. PagesVisited: {PagesVisited}, HtmlFilesSaved: {HtmlFilesSaved}", result.PagesVisited, result.HtmlFilesSaved);
 
         if (result.PagesVisited == 0 || result.HtmlFilesSaved == 0)
             throw new InvalidOperationException("The crawl produced no HTML output; existing generated repositories will not be replaced.");
+    }
+
+    private async ValueTask WaitForPageReadiness(IPage page, CancellationToken cancellationToken)
+    {
+        string url = page.Url;
+
+        for (int attempt = 1; attempt <= MaxPageReadinessAttempts; attempt++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            try
+            {
+                if (attempt > 1)
+                {
+                    await page.GotoAsync(url, new PageGotoOptions
+                    {
+                        WaitUntil = WaitUntilState.DOMContentLoaded,
+                        Timeout = PageReadinessTimeoutMs
+                    }).WaitAsync(cancellationToken);
+                }
+
+                await using IJSHandle readiness = await page.WaitForFunctionAsync(
+                    "() => document.querySelector('#app a[href]') !== null",
+                    options: new PageWaitForFunctionOptions { Timeout = PageReadinessTimeoutMs })
+                    .WaitAsync(cancellationToken);
+                return;
+            }
+            catch (TimeoutException exception) when (!cancellationToken.IsCancellationRequested)
+            {
+                if (attempt == MaxPageReadinessAttempts)
+                    throw new TimeoutException($"Page {url} did not become ready after {MaxPageReadinessAttempts} attempts.", exception);
+
+                TimeSpan delay = TimeSpan.FromSeconds(5 * attempt);
+                _logger.LogWarning(exception,
+                    "Page {Url} timed out on readiness attempt {Attempt} of {MaxAttempts}; retrying this page in {DelaySeconds} seconds",
+                    url, attempt, MaxPageReadinessAttempts, delay.TotalSeconds);
+                await Task.Delay(delay, cancellationToken);
+            }
+        }
     }
 
     private async ValueTask<string> GetCrawlContentDirectory(string crawlDirectory, CancellationToken cancellationToken)
